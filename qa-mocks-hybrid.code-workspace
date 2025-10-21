@@ -1,0 +1,22 @@
+{
+  "folders": [
+    {
+      "name": "QA Mocks Hybrid",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "terminal.integrated.cwd": "C:\\Desenv\\projects\\fastApi\\qa-mocks-hybrid",
+    "python.defaultInterpreterPath": "python",
+    "python.terminal.activateEnvironment": true,
+    "files.autoSave": "onWindowChange"
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.flake8",
+      "ms-toolsai.jupyter",
+      "ms-vscode.powershell"
+    ]
+  }
+}
