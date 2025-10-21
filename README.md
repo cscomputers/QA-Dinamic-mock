@@ -14,6 +14,7 @@ Sistema avançado de mocks para QA com persistência híbrida (Banco de Dados + 
 - ✅ **Mocks Dinâmicos**: Suporte a parâmetros e substituição de variáveis
 - ✅ **Status Monitoring**: Endpoint para verificar status do sistema
 - ✅ **Múltiplos Formatos**: Criação individual ou em lote
+- ✅ **Collection Postman**: Arquivo JSON para importar no Postman (ou equivalente).
 
 ## 📋 Pré-requisitos
 
