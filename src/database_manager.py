@@ -32,7 +32,7 @@ class DatabaseManager:
         database = os.getenv("DB_NAME", "qa_mocks")
         username = os.getenv("DB_USER", "sa")
         password = os.getenv("DB_PASSWORD")
-        driver = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
+        driver = os.getenv("DB_DRIVER", "SQL Server")
         
         if not password:
             raise ValueError("DB_PASSWORD não foi configurada")
@@ -60,16 +60,17 @@ class DatabaseManager:
             # Testa a conexão
             with self.engine.connect() as conn:
                 logger.info("Conexão com banco de dados estabelecida com sucesso")
-                
-            # Cria a tabela se não existir
+                  # Cria a tabela se não existir
             self.metadata.create_all(self.engine)
             self.connected = True
             
         except Exception as e:
             logger.error(f"Erro ao conectar com banco de dados: {e}")
-            if not self.fallback_to_memory:
+            if self.fallback_to_memory:
+                logger.warning("⚠️  FALLBACK ATIVADO: Usando armazenamento em memória devido à falha na conexão com o banco")
+                self.connected = False
+            else:
                 raise
-            self.connected = False
     
     def is_connected(self) -> bool:
         """Verifica se está conectado ao banco."""
@@ -107,7 +108,6 @@ class DatabaseManager:
                         'uri_pattern': uri_pattern
                     }
                 )
-                conn.commit()
             return True
         except SQLAlchemyError as e:
             logger.error(f"Erro ao criar mock no banco: {e}")
@@ -188,7 +188,6 @@ class DatabaseManager:
                             self.mocks_table.c.id == mock_id
                         ).values(**update_data)
                     )
-                    conn.commit()
                 return True
         except SQLAlchemyError as e:
             logger.error(f"Erro ao atualizar mock no banco: {e}")
@@ -204,7 +203,6 @@ class DatabaseManager:
                 conn.execute(
                     self.mocks_table.delete().where(self.mocks_table.c.id == mock_id)
                 )
-                conn.commit()
             return True
         except SQLAlchemyError as e:
             logger.error(f"Erro ao remover mock do banco: {e}")
@@ -218,7 +216,6 @@ class DatabaseManager:
         try:
             with self.engine.connect() as conn:
                 conn.execute(self.mocks_table.delete())
-                conn.commit()
             return True
         except SQLAlchemyError as e:
             logger.error(f"Erro ao limpar mocks do banco: {e}")

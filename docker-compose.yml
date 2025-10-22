@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: qa-mocks-mssql
+    hostname: qa-mocks-mssql
+    ports:
+      - "1460:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "QAMocks2024!"
+      MSSQL_PID: "Express"
+    volumes:
+      - mssql_data:/var/opt/mssql
+      - ./database_setup.sql:/docker-entrypoint-initdb.d/database_setup.sql:ro
+    restart: unless-stopped
+    networks:
+      - qa-mocks-network
+
+volumes:
+  mssql_data:
+    driver: local
+
+networks:
+  qa-mocks-network:
+    driver: bridge

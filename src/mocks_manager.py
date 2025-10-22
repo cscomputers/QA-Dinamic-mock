@@ -1,7 +1,7 @@
 import re
 import random
 import logging
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 from src.database_manager import DatabaseManager
 
 logging.basicConfig(level=logging.INFO)
@@ -10,31 +10,18 @@ logger = logging.getLogger(__name__)
 class MocksManager:
     def __init__(self):
         self.db_manager = DatabaseManager()
-        # Fallback em memória
+        # Fallback em memória (usado apenas quando banco não está disponível)
         self.memory_mocks: Dict[str, Dict[str, Any]] = {}
         
-        # Carrega mocks do banco para memória se conectado
-        if self.db_manager.is_connected():
-            self._load_mocks_from_db()
+        # Verifica se deve usar fallback
+        if not self.db_manager.is_connected() and self.db_manager.use_database:
+            logger.warning("⚠️  USANDO FALLBACK EM MEMÓRIA - Dados não serão persistidos")
         
-        logger.info(f"MocksManager inicializado - Banco conectado: {self.db_manager.is_connected()}")
+        logger.info(f"MocksManager inicializado - Modo: {'Banco de dados' if self.db_manager.is_connected() else 'Memória (fallback)'}")
     
-    def _load_mocks_from_db(self):
-        """Carrega todos os mocks do banco para a memória."""
-        try:
-            db_mocks = self.db_manager.get_all_mocks()
-            for mock in db_mocks:
-                mock_id = mock['id']
-                self.memory_mocks[mock_id] = {
-                    'uri': mock['uri'],
-                    'http_method': mock['http_method'],
-                    'status_code': mock['status_code'],
-                    'response': mock['response'],
-                    'uri_pattern': re.compile(f"^{mock['uri_pattern']}$")
-                }
-            logger.info(f"Carregados {len(db_mocks)} mocks do banco de dados")
-        except Exception as e:
-            logger.error(f"Erro ao carregar mocks do banco: {e}")
+    def _is_using_database(self) -> bool:
+        """Verifica se está usando banco de dados ativamente."""
+        return self.db_manager.is_connected()
     
     def generate_id(self) -> str:
         """Gera um ID único de 6 dígitos para cada mock."""
@@ -52,60 +39,79 @@ class MocksManager:
         return MocksManager.compile_uri_pattern_static(uri)
     
     def create_mock(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any]) -> str:
-        """Cria ou atualiza mock por uri + http_method. Se banco estiver conectado, só persiste no banco."""
-        if self.db_manager.is_connected():
-            # Busca mock existente no banco
-            db_mocks = self.db_manager.get_all_mocks()
-            for mock in db_mocks:
-                if mock['uri'] == uri and mock['http_method'] == http_method:
-                    self.db_manager.update_mock(mock['id'], status_code, response)
-                    return mock['id']
-            # Se não existe, cria novo
-            mock_id = self.generate_id()
-            uri_pattern_str = self.compile_uri_pattern(uri)
-            self.db_manager.create_mock(mock_id, uri, http_method, status_code, response, uri_pattern_str)
-            return mock_id
+        """Cria ou atualiza mock por uri + http_method."""
+        if self._is_using_database():
+            return self._create_mock_in_database(uri, http_method, status_code, response)
         else:
-            # Busca mock existente na memória
-            for mock_id, mock_data in self.memory_mocks.items():
-                if mock_data['uri'] == uri and mock_data['http_method'] == http_method:
-                    self.update_mock(mock_id, status_code, response)
-                    return mock_id
-            # Se não existe, cria novo na memória
-            mock_id = self.generate_id()
-            uri_pattern_str = self.compile_uri_pattern(uri)
-            uri_pattern_compiled = re.compile(f"^{uri_pattern_str}$")
-            self.memory_mocks[mock_id] = {
-                'uri': uri,
-                'http_method': http_method,
-                'status_code': status_code,
-                'response': response,
-                'uri_pattern': uri_pattern_compiled
-            }
-            return mock_id
+            return self._create_mock_in_memory(uri, http_method, status_code, response)
+    
+    def _create_mock_in_database(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any]) -> str:
+        """Cria mock no banco de dados."""
+        # Busca mock existente no banco
+        db_mocks = self.db_manager.get_all_mocks()
+        for mock in db_mocks:
+            if mock['uri'] == uri and mock['http_method'] == http_method:
+                self.db_manager.update_mock(mock['id'], status_code, response)
+                return mock['id']
+        
+        # Se não existe, cria novo
+        mock_id = self.generate_id()
+        uri_pattern_str = self.compile_uri_pattern(uri)
+        self.db_manager.create_mock(mock_id, uri, http_method, status_code, response, uri_pattern_str)
+        return mock_id
+    
+    def _create_mock_in_memory(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any]) -> str:
+        """Cria mock na memória."""
+        # Busca mock existente na memória
+        for mock_id, mock_data in self.memory_mocks.items():
+            if mock_data['uri'] == uri and mock_data['http_method'] == http_method:
+                self.update_mock(mock_id, status_code, response)
+                return mock_id
+        
+        # Se não existe, cria novo na memória
+        mock_id = self.generate_id()
+        uri_pattern_str = self.compile_uri_pattern(uri)
+        uri_pattern_compiled = re.compile(f"^{uri_pattern_str}$")
+        self.memory_mocks[mock_id] = {
+            'uri': uri,
+            'http_method': http_method,
+            'status_code': status_code,
+            'response': response,
+            'uri_pattern': uri_pattern_compiled
+        }
+        return mock_id
     
     def get_mock(self, mock_id: str) -> Optional[Dict[str, Any]]:
-        """Recupera um mock por ID. Se banco estiver conectado, só lê do banco."""
-        if self.db_manager.is_connected():
-            db_mock = self.db_manager.get_mock(mock_id)
-            if db_mock:
-                return {
-                    'uri': db_mock['uri'],
-                    'http_method': db_mock['http_method'],
-                    'status_code': db_mock['status_code'],
-                    'response': db_mock['response']
-                }
-            return None
+        """Recupera um mock por ID."""
+        if self._is_using_database():
+            return self._get_mock_from_database(mock_id)
         else:
-            if mock_id in self.memory_mocks:
-                mock_data = self.memory_mocks[mock_id].copy()
-                mock_data.pop('uri_pattern', None)
-                return mock_data
-            return None
+            return self._get_mock_from_memory(mock_id)
+    
+    def _get_mock_from_database(self, mock_id: str) -> Optional[Dict[str, Any]]:
+        """Recupera mock do banco."""
+        db_mock = self.db_manager.get_mock(mock_id)
+        if db_mock:
+            return {
+                'uri': db_mock['uri'],
+                'http_method': db_mock['http_method'],
+                'status_code': db_mock['status_code'],
+                'response': db_mock['response']
+            }
+        return None
+    
+    def _get_mock_from_memory(self, mock_id: str) -> Optional[Dict[str, Any]]:
+        """Recupera mock da memória."""
+        if mock_id in self.memory_mocks:
+            mock_data = self.memory_mocks[mock_id].copy()
+            # Remove o padrão compilado antes de retornar
+            mock_data.pop('uri_pattern', None)
+            return mock_data
+        return None
     
     def get_all_mocks(self) -> List[Dict[str, Any]]:
-        """Recupera todos os mocks. Se banco estiver conectado, só lê do banco."""
-        if self.db_manager.is_connected():
+        """Recupera todos os mocks."""
+        if self._is_using_database():
             try:
                 db_mocks = self.db_manager.get_all_mocks()
                 return [
@@ -132,63 +138,72 @@ class MocksManager:
             ]
     
     def update_mock(self, mock_id: str, status_code: Optional[int] = None, 
-                   response: Optional[Dict[str, Any]] = None,
-                   uri: Optional[str] = None,
-                   http_method: Optional[str] = None) -> bool:
-        """Atualiza um mock existente, incluindo uri e método. Se banco estiver conectado, só atualiza no banco."""
+                   response: Optional[Dict[str, Any]] = None) -> bool:
+        """Atualiza um mock existente."""
         if not self.mock_exists(mock_id):
             return False
-        success = True
-        if self.db_manager.is_connected():
-            if not self.db_manager.update_mock(mock_id, status_code, response, uri, http_method):
-                logger.warning(f"Falha ao atualizar mock {mock_id} no banco")
-                success = False
+        
+        if self._is_using_database():
+            return self.db_manager.update_mock(mock_id, status_code, response)
         else:
             if mock_id in self.memory_mocks:
                 if status_code is not None:
                     self.memory_mocks[mock_id]['status_code'] = status_code
                 if response is not None:
                     self.memory_mocks[mock_id]['response'] = response
-                if uri is not None:
-                    self.memory_mocks[mock_id]['uri'] = uri
-                    self.memory_mocks[mock_id]['uri_pattern'] = re.compile(f"^{self.compile_uri_pattern(uri)}$")
-                if http_method is not None:
-                    self.memory_mocks[mock_id]['http_method'] = http_method
-        return success
+            return True
     
     def delete_mock(self, mock_id: str) -> bool:
-        """Remove um mock. Se banco estiver conectado, só remove do banco."""
+        """Remove um mock."""
         if not self.mock_exists(mock_id):
             return False
-        if self.db_manager.is_connected():
-            if not self.db_manager.delete_mock(mock_id):
-                logger.warning(f"Falha ao remover mock {mock_id} do banco")
-                return False
-            return True
+        
+        if self._is_using_database():
+            return self.db_manager.delete_mock(mock_id)
         else:
             self.memory_mocks.pop(mock_id, None)
             return True
     
     def delete_all_mocks(self) -> bool:
-        """Remove todos os mocks. Se banco estiver conectado, só remove do banco."""
-        if self.db_manager.is_connected():
-            if not self.db_manager.delete_all_mocks():
-                logger.warning("Falha ao limpar mocks do banco")
-                return False
-            return True
+        """Remove todos os mocks."""
+        if self._is_using_database():
+            return self.db_manager.delete_all_mocks()
         else:
             self.memory_mocks.clear()
             return True
     
     def mock_exists(self, mock_id: str) -> bool:
-        """Verifica se um mock existe. Se banco estiver conectado, só verifica no banco."""
-        if self.db_manager.is_connected():
+        """Verifica se um mock existe."""
+        if self._is_using_database():
             return self.db_manager.mock_exists(mock_id)
         else:
             return mock_id in self.memory_mocks
     
     def find_matching_mock(self, path: str, method: str) -> Optional[Dict[str, Any]]:
         """Encontra um mock que corresponde ao path e método."""
+        if self._is_using_database():
+            return self._find_mock_in_database(path, method)
+        else:
+            return self._find_mock_in_memory(path, method)
+    
+    def _find_mock_in_database(self, path: str, method: str) -> Optional[Dict[str, Any]]:
+        """Busca mock no banco de dados."""
+        db_mocks = self.db_manager.get_all_mocks()
+        for mock in db_mocks:
+            if mock['http_method'] == method.upper():
+                pattern = re.compile(f"^{self.compile_uri_pattern(mock['uri'])}$")
+                match = pattern.match(path)
+                if match:
+                    return {
+                        'mock_id': mock['id'],
+                        'status_code': mock['status_code'],
+                        'response': mock['response'],
+                        'variables': match.groupdict()
+                    }
+        return None
+    
+    def _find_mock_in_memory(self, path: str, method: str) -> Optional[Dict[str, Any]]:
+        """Busca mock na memória."""
         for mock_id, mock_data in self.memory_mocks.items():
             if mock_data['http_method'] == method.upper():
                 match = mock_data['uri_pattern'].match(path)
@@ -203,9 +218,17 @@ class MocksManager:
     
     def get_status(self) -> Dict[str, Any]:
         """Retorna status do sistema."""
+        if self._is_using_database():
+            total_mocks = len(self.db_manager.get_all_mocks())
+            storage_mode = "Database"
+        else:
+            total_mocks = len(self.memory_mocks)
+            storage_mode = "Memory (Fallback)" if self.db_manager.use_database else "Memory"
+        
         return {
             'database_connected': self.db_manager.is_connected(),
-            'total_mocks': len(self.memory_mocks),
+            'storage_mode': storage_mode,
+            'total_mocks': total_mocks,
             'use_database': self.db_manager.use_database,
             'fallback_to_memory': self.db_manager.fallback_to_memory
         }

@@ -1,17 +1,16 @@
 {
 	"info": {
-		"_postman_id": "e092acf1-7718-4315-bed8-2b50593345c6",
+		"_postman_id": "c82de0cb-9fa8-4714-adbb-77294fbc4739",
 		"name": "QA_MOCK_DINAMICO",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "27424927",
-		"_collection_link": "https://dark-moon-611912.postman.co/workspace/Workspace-Antonio~59b5edb9-92d3-4d37-8a3c-0be43ad019d7/collection/27424927-e092acf1-7718-4315-bed8-2b50593345c6?action=share&source=collection_link&creator=27424927"
+		"_exporter_id": "1032877"
 	},
 	"item": [
 		{
 			"name": "Chamadas endpoins",
 			"item": [
 				{
-					"name": "Cancelar Agendamento",
+					"name": "Teste - Cancelar Agendamento",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -34,26 +33,6 @@
 						}
 					},
 					"response": []
-				},
-				{
-					"name": "Listar Mocks",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:40028/listar/mocks",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "40028",
-							"path": [
-								"listar",
-								"mocks"
-							]
-						}
-					},
-					"response": []
 				}
 			]
 		},
@@ -62,7 +41,46 @@
 			"item": [
 				{
 					"name": "Exclusão (cuidado)",
-					"item": []
+					"item": [
+						{
+							"name": "Exclui todos os mocks",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:40028/mocks",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "40028",
+									"path": [
+										"mocks"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Exclui um mock por ID",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:40028/mocks/:id",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "40028",
+									"path": [
+										"mocks"
+									]
+								}
+							},
+							"response": []
+						}
+					]
 				},
 				{
 					"name": "Listar Mocks",
@@ -70,14 +88,13 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:40028/listar/mocks",
+							"raw": "http://localhost:40028/mocks",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "40028",
 							"path": [
-								"listar",
 								"mocks"
 							]
 						}
