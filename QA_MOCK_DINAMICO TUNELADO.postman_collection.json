@@ -1,0 +1,226 @@
+{
+	"info": {
+		"_postman_id": "bc5902f2-5463-4230-b0c0-910bfc5a7e39",
+		"name": "QA_MOCK_DINAMICO TUNELADO",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1032877"
+	},
+	"item": [
+		{
+			"name": "Chamadas endpoins",
+			"item": [
+				{
+					"name": "Cancelar Agendamento",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:40028/jdpi/pa/api/v1/agendamento/12/cancelar",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "40028",
+							"path": [
+								"jdpi",
+								"pa",
+								"api",
+								"v1",
+								"agendamento",
+								"12",
+								"cancelar"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Configuração",
+			"item": [
+				{
+					"name": "Exclusão (cuidado)",
+					"item": [
+						{
+							"name": "Exclui todos os mocks",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "https://qa-mocks-api.loca.lt/mocks",
+									"protocol": "https",
+									"host": [
+										"qa-mocks-api",
+										"loca",
+										"lt"
+									],
+									"path": [
+										"mocks"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Exclui um mock por ID",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "https://qa-mocks-api.loca.lt/mocks/:id",
+									"protocol": "https",
+									"host": [
+										"qa-mocks-api",
+										"loca",
+										"lt"
+									],
+									"path": [
+										"mocks",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "604857"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Listar Mocks",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://qa-mocks-api.loca.lt/mocks",
+							"protocol": "https",
+							"host": [
+								"qa-mocks-api",
+								"loca",
+								"lt"
+							],
+							"path": [
+								"mocks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Consultar Mock por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://qa-mocks-api.loca.lt/mocks/:id",
+							"protocol": "https",
+							"host": [
+								"qa-mocks-api",
+								"loca",
+								"lt"
+							],
+							"path": [
+								"mocks",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "826754"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Configurar um Endpoint",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "// Pode ser um único endpoint ou um array de endpoints\r\n{\r\n    \"uri\": \"/jdpi/pa/api/v1/agendamento/:endToEndId/cancelar\",\r\n    \"http_method\": \"POST\",\r\n    \"status_code_response\": \"200\",\r\n    \"response\": {\r\n        \"dtHrReqJdPi\": \"2025-09-11T18:59:44.996Z\",\r\n        \"endToEndId\": \"string\",\r\n        \"idConciliacaoRecebedor\": \"string\",\r\n        \"idCancelamento\": \"CA868591392025091169190089608\",\r\n        \"dtHrCancelamento\": \"2025-09-11T18:59:44.996Z\"\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://qa-mocks-api.loca.lt/mocks/configurar/endpoint",
+							"protocol": "https",
+							"host": [
+								"qa-mocks-api",
+								"loca",
+								"lt"
+							],
+							"path": [
+								"mocks",
+								"configurar",
+								"endpoint"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Configurar multiplos Endpoints",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "// Pode ser um único endpoint ou um array de endpoints\r\n[\r\n    {\r\n        \"uri\": \"/jdpi/pa/api/v1/agendamento/:endToEndId/cancelar\",\r\n        \"http_method\": \"POST\",\r\n        \"status_code_response\": \"200\",\r\n        \"response\": {\r\n            \"dtHrReqJdPi\": \"2025-09-11T18:59:44.996Z\",\r\n            \"endToEndId\": \"string\",\r\n            \"idConciliacaoRecebedor\": \"string\",\r\n            \"idCancelamento\": \"CA868591392025091169190089608\",\r\n            \"dtHrCancelamento\": \"2025-09-11T18:59:44.996Z\"\r\n        }\r\n    },\r\n    {\r\n        \"uri\": \"/jdpi/pa/api/v1/recorrencia/:endToEndId/cancelar\",\r\n        \"http_method\": \"POST\",\r\n        \"status_code_response\": \"200\",\r\n        \"response\": {\r\n            \"dtHrReqJdPi\": \"2025-10-11T18:59:44.996Z\",\r\n            \"endToEndId\": \"string\",\r\n            \"idConciliacaoRecebedor\": \"string\",\r\n            \"idCancelamento\": \"CA868591392025091169190089710\",\r\n            \"dtHrCancelamento\": \"2025-10-11T18:59:44.996Z\"\r\n        }\r\n    }\r\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://qa-mocks-api.loca.lt/mocks/configurar/endpoint",
+							"protocol": "https",
+							"host": [
+								"qa-mocks-api",
+								"loca",
+								"lt"
+							],
+							"path": [
+								"mocks",
+								"configurar",
+								"endpoint"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Teste Servidor",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://qa-mocks-api.loca.lt/status",
+							"protocol": "https",
+							"host": [
+								"qa-mocks-api",
+								"loca",
+								"lt"
+							],
+							"path": [
+								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
