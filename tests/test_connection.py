@@ -25,38 +25,38 @@ try:
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
     
-    # Verifica se o banco qa_mocks existe
-    cursor.execute("SELECT name FROM sys.databases WHERE name = 'qa_mocks'")
+    # Verifica se o banco qa_api existe
+    cursor.execute("SELECT name FROM sys.databases WHERE name = 'qa_api'")
     result = cursor.fetchone()
     
     if result:
-        print("✅ Banco 'qa_mocks' já existe!")
+        print("✅ Banco 'qa_api' já existe!")
     else:
-        print("ℹ️ Banco 'qa_mocks' não existe. Criando...")
-        cursor.execute("CREATE DATABASE qa_mocks")
+        print("ℹ️ Banco 'qa_api' não existe. Criando...")
+        cursor.execute("CREATE DATABASE qa_api")
         conn.commit()
-        print("✅ Banco 'qa_mocks' criado com sucesso!")
+        print("✅ Banco 'qa_api' criado com sucesso!")
     
     cursor.close()
     conn.close()
     
-    # Teste 2: Conectar no banco qa_mocks
-    print("\nTestando conexão no banco 'qa_mocks'...")
+    # Teste 2: Conectar no banco qa_api
+    print("\nTestando conexão no banco 'qa_api'...")
     db = DatabaseManager()
     if db.is_connected():
-        print('✅ Conexão com banco qa_mocks estabelecida com sucesso!')
+        print('✅ Conexão com banco qa_api estabelecida com sucesso!')
         print('✅ Sistema irá usar persistência no SQL Server')
         
         # Testa criação de tabela
         try:
             with db.engine.connect() as conn:
                 db.metadata.create_all(db.engine)
-                print('✅ Tabela qa_mocks criada/verificada com sucesso!')
+                print('✅ Tabela qa_api criada/verificada com sucesso!')
         except Exception as e:
             print(f'⚠️ Erro ao criar tabela: {e}')
         
     else:
-        print('❌ Não foi possível conectar ao banco qa_mocks')
+        print('❌ Não foi possível conectar ao banco qa_api')
         print('ℹ️ Sistema irá usar fallback para memória')
         
 except Exception as e:

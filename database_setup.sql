@@ -1,50 +1,47 @@
--- Script de criação do banco de dados para QA Mocks
--- Execute este script no SQL Server Management Studio ou Azure Data Studio
+-- Script de criação do banco de dados para QA API (PostgreSQL)
+-- Execute este script no psql ou ferramenta gráfica
 
--- Criar o banco de dados qa_mocks se não existir
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'qa_mocks')
-CREATE DATABASE qa_mocks;
-GO
+-- Criar o banco de dados qa_api se não existir
+DO $$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'qa_api') THEN
+      CREATE DATABASE qa_api;
+   END IF;
+END$$;
 
--- Usar o banco de dados qa_mocks
-USE qa_mocks;
-GO
+-- Conectar ao banco de dados qa_api antes de executar o restante
+-- \c qa_api
 
 -- Criar a tabela de mocks
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='qa_mocks' AND xtype='U')
-CREATE TABLE qa_mocks (
-    id NVARCHAR(10) PRIMARY KEY,
-    uri NVARCHAR(500) NOT NULL,
-    http_method NVARCHAR(10) NOT NULL,
+CREATE TABLE IF NOT EXISTS qa_api (
+    id VARCHAR(10) PRIMARY KEY,
+    uri VARCHAR(500) NOT NULL,
+    http_method VARCHAR(10) NOT NULL,
     status_code INT NOT NULL,
-    response_body NTEXT NOT NULL,
-    uri_pattern NVARCHAR(500) NOT NULL,
-    created_at DATETIME2 DEFAULT GETUTCDATE(),
-    updated_at DATETIME2 DEFAULT GETUTCDATE()
+    response_body TEXT NOT NULL,
+    uri_pattern VARCHAR(500) NOT NULL,
+    headers JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-GO
 
 -- Criar índice para melhor performance nas consultas
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_qa_mocks_method_uri' AND object_id = OBJECT_ID('qa_mocks'))
-CREATE INDEX IX_qa_mocks_method_uri ON qa_mocks(http_method, uri);
-GO
+CREATE INDEX IF NOT EXISTS IX_qa_api_method_uri ON qa_api(http_method, uri);
 
--- Adicionar trigger para atualizar updated_at automaticamente
-IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TR_qa_mocks_updated_at')
-DROP TRIGGER TR_qa_mocks_updated_at;
-GO
-
-CREATE TRIGGER TR_qa_mocks_updated_at
-ON qa_mocks
-AFTER UPDATE
-AS
+-- Trigger para atualizar updated_at automaticamente
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
 BEGIN
-    SET NOCOUNT ON;
-    UPDATE qa_mocks 
-    SET updated_at = GETUTCDATE()
-    FROM qa_mocks m
-    INNER JOIN inserted i ON m.id = i.id;
+   NEW.updated_at = NOW();
+   RETURN NEW;
 END;
-GO
+$$ LANGUAGE plpgsql;
 
-PRINT 'Banco de dados qa_mocks configurado com sucesso!';
+DROP TRIGGER IF EXISTS trg_qa_api_updated_at ON qa_api;
+CREATE TRIGGER trg_qa_api_updated_at
+BEFORE UPDATE ON qa_api
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- Mensagem de sucesso
+DO $$ BEGIN RAISE NOTICE 'Banco de dados qa_api configurado com sucesso!'; END $$;

@@ -174,5 +174,10 @@ async def catch_all(full_path: str, request: Request):
         status_code=404,
         content={"erro": f"Nenhuma resposta configurada para {method} {path}"}
     )
-    
-    # Para rodar: python -m uvicorn src.qa_api:app --host 0.0.0.0 --port 40028 --reload
+
+if __name__ == "__main__":
+    import os
+    import uvicorn
+    port = int(os.getenv("API_PORT", 8090))
+    uvicorn.run("src.qa_api:app", host="0.0.0.0", port=port, reload=True)
+

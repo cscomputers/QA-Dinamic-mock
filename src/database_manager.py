@@ -10,6 +10,7 @@ from typing import Dict, Any, List, Optional
 from sqlalchemy import create_engine, Column, String, Integer, Text, MetaData, Table, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
+from sqlalchemy.dialects.postgresql import JSONB
 from dotenv import load_dotenv
 
 # Carrega variáveis de ambiente
@@ -31,18 +32,15 @@ class DatabaseManager:
             self._setup_database()
     
     def _get_connection_string(self) -> str:
-        """Constrói a string de conexão do SQL Server."""
+        """Constrói a string de conexão do PostgreSQL."""
         server = os.getenv("DB_SERVER", "localhost")
-        port = os.getenv("DB_PORT", "1433")
-        database = os.getenv("DB_NAME", "qa_mocks")
-        username = os.getenv("DB_USER", "sa")
+        port = os.getenv("DB_PORT", "5432")
+        database = os.getenv("DB_NAME", "qa_api")
+        username = os.getenv("DB_USER", "acloman")
         password = os.getenv("DB_PASSWORD")
-        driver = os.getenv("DB_DRIVER", "SQL Server")
-        
         if not password:
             raise ValueError("DB_PASSWORD não foi configurada")
-        
-        return f"mssql+pyodbc://{username}:{password}@{server}:{port}/{database}?driver={driver}&TrustServerCertificate=yes"
+        return f"postgresql+psycopg2://{username}:{password}@{server}:{port}/{database}"
     
     def _setup_database(self):
         """Configura a conexão com o banco de dados."""
@@ -52,7 +50,7 @@ class DatabaseManager:
             
             # Define a tabela de mocks
             self.mocks_table = Table(
-                'qa_mocks',
+                'qa_api',
                 self.metadata,
                 Column('id', String(10), primary_key=True),
                 Column('uri', String(500), nullable=False),
@@ -60,11 +58,11 @@ class DatabaseManager:
                 Column('status_code', Integer, nullable=False),
                 Column('response_body', Text, nullable=False),
                 Column('uri_pattern', String(500), nullable=False),
-                Column('headers', Text, nullable=True, default='{}')
+                Column('headers', JSONB, nullable=True, default={})
             )
             
             # Testa a conexão
-            with self.engine.connect() as conn:
+            with self.engine.connect():
                 logger.info("Conexão com banco de dados estabelecida com sucesso")
             
             # Cria a tabela se não existir
@@ -114,7 +112,7 @@ class DatabaseManager:
                         'status_code': status_code,
                         'response_body': json.dumps(response),
                         'uri_pattern': uri_pattern,
-                        'headers': json.dumps(headers or {})
+                        'headers': headers or {}
                     }
                 )
             return True
@@ -136,8 +134,8 @@ class DatabaseManager:
                 if result:
                     # Tenta carregar headers se existir a coluna, senão usa dict vazio
                     try:
-                        headers = json.loads(result.headers) if hasattr(result, 'headers') and result.headers else {}
-                    except:
+                        headers = result.headers if hasattr(result, 'headers') and result.headers else {}
+                    except Exception:
                         headers = {}
                     
                     return {
@@ -161,19 +159,18 @@ class DatabaseManager:
         try:
             with self.engine.connect() as conn:
                 results = conn.execute(self.mocks_table.select()).fetchall()
-                
-                return [
-                    {
+                mocks = []
+                for row in results:
+                    mocks.append({
                         'id': row.id,
                         'uri': row.uri,
                         'http_method': row.http_method,
                         'status_code': row.status_code,
                         'response': json.loads(row.response_body),
                         'uri_pattern': row.uri_pattern,
-                        'headers': json.loads(row.headers) if hasattr(row, 'headers') and row.headers else {}
-                    }
-                    for row in results
-                ]
+                        'headers': row.headers if hasattr(row, 'headers') and row.headers else {}
+                    })
+                return mocks
         except SQLAlchemyError as e:
             logger.error(f"Erro ao recuperar mocks do banco: {e}")
         return []
@@ -202,7 +199,7 @@ class DatabaseManager:
                 if http_method is not None:
                     update_data['http_method'] = http_method
                 if headers is not None:
-                    update_data['headers'] = json.dumps(headers)
+                    update_data['headers'] = headers
                     
                 if update_data:
                     conn.execute(
