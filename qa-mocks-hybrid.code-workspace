@@ -4,9 +4,8 @@
       "name": "QA Mocks Hybrid",
       "path": "."
     }
-  ],
-  "settings": {
-    "terminal.integrated.cwd": "C:\\Desenv\\projects\\fastApi\\qa-mocks-hybrid",
+  ],  "settings": {
+    "terminal.integrated.cwd": "D:\\Desenv\\QA-Dinamic-mock",
     "python.defaultInterpreterPath": "python",
     "python.terminal.activateEnvironment": true,
     "files.autoSave": "onWindowChange"

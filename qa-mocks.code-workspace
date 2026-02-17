@@ -1,0 +1,62 @@
+{
+  "folders": [
+    {
+      "name": "QA Mocks System",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "terminal.integrated.cwd": "D:\\Desenv\\QA-Dinamic-mock",
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "python.defaultInterpreterPath": "python",
+    "python.terminal.activateEnvironment": true,
+    "files.autoSave": "onWindowChange",
+    "git.defaultCloneDirectory": "D:\\Desenv",
+    "git.confirmSync": false,
+    "git.enableSmartCommit": true
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.flake8", 
+      "ms-toolsai.jupyter",
+      "ms-vscode.powershell",
+      "GitHub.vscode-pull-request-github"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Start QA Mocks API",
+        "type": "shell",
+        "command": "python",
+        "args": ["start_api.py"],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "new"
+        },
+        "runOptions": {
+          "runOn": "folderOpen"
+        }
+      },
+      {
+        "label": "Test Complete System",
+        "type": "shell", 
+        "command": "python",
+        "args": ["test_complete.py"],
+        "group": "test"
+      },
+      {
+        "label": "Start Public Tunnel",
+        "type": "shell",
+        "command": ".\\manage-tunnel.ps1",
+        "args": ["start"],
+        "group": "build"
+      }
+    ]
+  }
+}

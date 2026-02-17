@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+Database Manager com suporte a headers customizados
+"""
+
 import os
 import json
 import logging
@@ -54,13 +59,15 @@ class DatabaseManager:
                 Column('http_method', String(10), nullable=False),
                 Column('status_code', Integer, nullable=False),
                 Column('response_body', Text, nullable=False),
-                Column('uri_pattern', String(500), nullable=False)
+                Column('uri_pattern', String(500), nullable=False),
+                Column('headers', Text, nullable=True, default='{}')
             )
             
             # Testa a conexão
             with self.engine.connect() as conn:
                 logger.info("Conexão com banco de dados estabelecida com sucesso")
-                  # Cria a tabela se não existir
+            
+            # Cria a tabela se não existir
             self.metadata.create_all(self.engine)
             self.connected = True
             
@@ -90,7 +97,8 @@ class DatabaseManager:
             return False
     
     def create_mock(self, mock_id: str, uri: str, http_method: str, 
-                   status_code: int, response: Dict[str, Any], uri_pattern: str) -> bool:
+                   status_code: int, response: Dict[str, Any], uri_pattern: str, 
+                   headers: Optional[Dict[str, str]] = None) -> bool:
         """Cria um mock no banco de dados."""
         if not self.is_connected():
             return False
@@ -105,7 +113,8 @@ class DatabaseManager:
                         'http_method': http_method,
                         'status_code': status_code,
                         'response_body': json.dumps(response),
-                        'uri_pattern': uri_pattern
+                        'uri_pattern': uri_pattern,
+                        'headers': json.dumps(headers or {})
                     }
                 )
             return True
@@ -125,13 +134,20 @@ class DatabaseManager:
                 ).fetchone()
                 
                 if result:
+                    # Tenta carregar headers se existir a coluna, senão usa dict vazio
+                    try:
+                        headers = json.loads(result.headers) if hasattr(result, 'headers') and result.headers else {}
+                    except:
+                        headers = {}
+                    
                     return {
                         'id': result.id,
                         'uri': result.uri,
                         'http_method': result.http_method,
                         'status_code': result.status_code,
                         'response': json.loads(result.response_body),
-                        'uri_pattern': result.uri_pattern
+                        'uri_pattern': result.uri_pattern,
+                        'headers': headers
                     }
         except SQLAlchemyError as e:
             logger.error(f"Erro ao recuperar mock do banco: {e}")
@@ -153,7 +169,8 @@ class DatabaseManager:
                         'http_method': row.http_method,
                         'status_code': row.status_code,
                         'response': json.loads(row.response_body),
-                        'uri_pattern': row.uri_pattern
+                        'uri_pattern': row.uri_pattern,
+                        'headers': json.loads(row.headers) if hasattr(row, 'headers') and row.headers else {}
                     }
                     for row in results
                 ]
@@ -164,10 +181,12 @@ class DatabaseManager:
     def update_mock(self, mock_id: str, status_code: Optional[int] = None, 
                    response: Optional[Dict[str, Any]] = None,
                    uri: Optional[str] = None,
-                   http_method: Optional[str] = None) -> bool:
+                   http_method: Optional[str] = None,
+                   headers: Optional[Dict[str, str]] = None) -> bool:
         """Atualiza um mock no banco de dados, incluindo uri e método."""
         if not self.is_connected():
             return False
+            
         try:
             with self.engine.connect() as conn:
                 update_data = {}
@@ -182,6 +201,9 @@ class DatabaseManager:
                     update_data['uri_pattern'] = MocksManager.compile_uri_pattern_static(uri)
                 if http_method is not None:
                     update_data['http_method'] = http_method
+                if headers is not None:
+                    update_data['headers'] = json.dumps(headers)
+                    
                 if update_data:
                     conn.execute(
                         self.mocks_table.update().where(

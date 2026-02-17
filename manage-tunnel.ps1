@@ -27,11 +27,11 @@ function Show-Help {
     Write-Host "  help      - Mostra esta ajuda" -ForegroundColor Gray
     Write-Host ""
     Write-Host "⚙️  OPÇÕES:" -ForegroundColor Yellow
-    Write-Host "  -Port     - Porta da API (padrão: 40028)" -ForegroundColor White
-    Write-Host "  -Method   - Método do túnel (localtunnel|ngrok)" -ForegroundColor White
+    Write-Host "  -Port     - Porta da API (padrão: 40028)" -ForegroundColor White    Write-Host "  -Method   - Método do túnel (cloudflare|localtunnel)" -ForegroundColor White
     Write-Host ""
     Write-Host "📝 EXEMPLOS:" -ForegroundColor Yellow
-    Write-Host "  .\manage-tunnel.ps1 start" -ForegroundColor Green
+    Write-Host "  .\manage-tunnel.ps1 start -Method cloudflare" -ForegroundColor Green
+    Write-Host "  .\manage-tunnel.ps1 start -Method localtunnel" -ForegroundColor Green
     Write-Host "  .\manage-tunnel.ps1 test" -ForegroundColor Green
     Write-Host "  .\manage-tunnel.ps1 status" -ForegroundColor Green
 }
@@ -87,24 +87,30 @@ function Start-Tunnel {
         }
         catch {
             Write-Host "❌ Erro ao iniciar LocalTunnel: $($_.Exception.Message)" -ForegroundColor Red
-        }
-    }
-    elseif ($Method -eq "ngrok") {
-        Write-Host "📡 Verificando ngrok..." -ForegroundColor Blue
+        }    elseif ($Method -eq "cloudflare") {
+        Write-Host "📡 Verificando Cloudflare Tunnel..." -ForegroundColor Blue
         try {
-            $ngrokVersion = ngrok version 2>$null
+            $cloudflaredVersion = cloudflared version 2>$null
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "🚀 Iniciando túnel ngrok na porta $Port..." -ForegroundColor Green
-                Start-Process powershell -ArgumentList "-NoExit", "-Command", "ngrok http $Port"
-                Write-Host "✅ Túnel ngrok iniciado!" -ForegroundColor Green
+                Write-Host "🚀 Iniciando túnel Cloudflare na porta $Port..." -ForegroundColor Green
+                Write-Host "   Aguarde alguns segundos para obter a URL..." -ForegroundColor Yellow
+                Write-Host ""
+                
+                # Inicia o túnel
+                Start-Process powershell -ArgumentList "-NoExit", "-Command", "cloudflared tunnel --url http://localhost:$Port"
+                
+                Start-Sleep -Seconds 3
+                Write-Host "✅ Túnel Cloudflare iniciado!" -ForegroundColor Green
+                Write-Host "🔗 Sua URL pública será mostrada na nova janela" -ForegroundColor Cyan
+                Write-Host "📋 A URL será algo como: https://[hash].trycloudflare.com" -ForegroundColor White
             }
             else {
-                Write-Host "❌ ngrok não está instalado ou configurado" -ForegroundColor Red
-                Write-Host "   Use: .\manage-tunnel.ps1 start -Method localtunnel" -ForegroundColor Yellow
+                Write-Host "❌ cloudflared não está instalado" -ForegroundColor Red
+                Write-Host "   Instale com: winget install cloudflare.cloudflared" -ForegroundColor Yellow
             }
         }
         catch {
-            Write-Host "❌ Erro ao iniciar ngrok: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "❌ Erro ao iniciar cloudflared: $($_.Exception.Message)" -ForegroundColor Red
         }
     }
 }

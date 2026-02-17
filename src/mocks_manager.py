@@ -38,34 +38,34 @@ class MocksManager:
     def compile_uri_pattern(self, uri: str) -> str:
         return MocksManager.compile_uri_pattern_static(uri)
     
-    def create_mock(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any]) -> str:
+    def create_mock(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> str:
         """Cria ou atualiza mock por uri + http_method."""
         if self._is_using_database():
-            return self._create_mock_in_database(uri, http_method, status_code, response)
+            return self._create_mock_in_database(uri, http_method, status_code, response, headers)
         else:
-            return self._create_mock_in_memory(uri, http_method, status_code, response)
+            return self._create_mock_in_memory(uri, http_method, status_code, response, headers)
     
-    def _create_mock_in_database(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any]) -> str:
+    def _create_mock_in_database(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> str:
         """Cria mock no banco de dados."""
         # Busca mock existente no banco
         db_mocks = self.db_manager.get_all_mocks()
         for mock in db_mocks:
             if mock['uri'] == uri and mock['http_method'] == http_method:
-                self.db_manager.update_mock(mock['id'], status_code, response)
+                self.db_manager.update_mock(mock['id'], status_code, response, headers=headers)
                 return mock['id']
         
         # Se não existe, cria novo
         mock_id = self.generate_id()
         uri_pattern_str = self.compile_uri_pattern(uri)
-        self.db_manager.create_mock(mock_id, uri, http_method, status_code, response, uri_pattern_str)
+        self.db_manager.create_mock(mock_id, uri, http_method, status_code, response, uri_pattern_str, headers)
         return mock_id
     
-    def _create_mock_in_memory(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any]) -> str:
+    def _create_mock_in_memory(self, uri: str, http_method: str, status_code: int, response: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> str:
         """Cria mock na memória."""
         # Busca mock existente na memória
         for mock_id, mock_data in self.memory_mocks.items():
             if mock_data['uri'] == uri and mock_data['http_method'] == http_method:
-                self.update_mock(mock_id, status_code, response)
+                self.update_mock(mock_id, status_code, response, headers=headers)
                 return mock_id
         
         # Se não existe, cria novo na memória
@@ -77,6 +77,7 @@ class MocksManager:
             'http_method': http_method,
             'status_code': status_code,
             'response': response,
+            'headers': headers or {},
             'uri_pattern': uri_pattern_compiled
         }
         return mock_id
@@ -96,7 +97,8 @@ class MocksManager:
                 'uri': db_mock['uri'],
                 'http_method': db_mock['http_method'],
                 'status_code': db_mock['status_code'],
-                'response': db_mock['response']
+                'response': db_mock['response'],
+                'headers': db_mock.get('headers', {})
             }
         return None
     
@@ -138,19 +140,21 @@ class MocksManager:
             ]
     
     def update_mock(self, mock_id: str, status_code: Optional[int] = None, 
-                   response: Optional[Dict[str, Any]] = None) -> bool:
+                   response: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> bool:
         """Atualiza um mock existente."""
         if not self.mock_exists(mock_id):
             return False
         
         if self._is_using_database():
-            return self.db_manager.update_mock(mock_id, status_code, response)
+            return self.db_manager.update_mock(mock_id, status_code, response, headers=headers)
         else:
             if mock_id in self.memory_mocks:
                 if status_code is not None:
                     self.memory_mocks[mock_id]['status_code'] = status_code
                 if response is not None:
                     self.memory_mocks[mock_id]['response'] = response
+                if headers is not None:
+                    self.memory_mocks[mock_id]['headers'] = headers
             return True
     
     def delete_mock(self, mock_id: str) -> bool:
@@ -198,6 +202,7 @@ class MocksManager:
                         'mock_id': mock['id'],
                         'status_code': mock['status_code'],
                         'response': mock['response'],
+                        'headers': mock.get('headers', {}),
                         'variables': match.groupdict()
                     }
         return None
@@ -212,6 +217,7 @@ class MocksManager:
                         'mock_id': mock_id,
                         'status_code': mock_data['status_code'],
                         'response': mock_data['response'],
+                        'headers': mock_data.get('headers', {}),
                         'variables': match.groupdict()
                     }
         return None

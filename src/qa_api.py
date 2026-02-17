@@ -37,13 +37,14 @@ async def criar_mocks(config: Union[Dict[str, Any], List[Dict[str, Any]]]):
         method = item.get("http_method", "GET").upper()
         status_code = item.get("status_code_response", 200)
         response_body = item.get("response")
+        headers = item.get("headers")
 
         if not uri or response_body is None:
             erros.append({"index": idx, "erro": "Campos obrigatórios faltando"})
             continue
 
         try:
-            mock_id = mocks_manager.create_mock(uri, method, status_code, response_body)
+            mock_id = mocks_manager.create_mock(uri, method, status_code, response_body, headers)
             criados.append({"id": mock_id, "uri": uri, "http_method": method})
         except ValueError as ve:
             logger.error(f"Duplicidade ao criar mock {idx}: {ve}")
@@ -75,7 +76,8 @@ async def consultar_mock(mock_id: str):
         "uri": mock_data["uri"],
         "http_method": mock_data["http_method"],
         "status_code": mock_data["status_code"],
-        "response": mock_data["response"]
+        "response": mock_data["response"],
+        "headers": mock_data.get("headers", {})
     }
 
 @app.put("/mocks/{mock_id}")
@@ -86,10 +88,11 @@ async def editar_mock(mock_id: str, config: Dict[str, Any]):
 
     status_code = config.get("status_code_response")
     response_body = config.get("response")
+    headers = config.get("headers")
     uri = config.get("uri")
     http_method = config.get("http_method")
 
-    success = mocks_manager.update_mock(mock_id, status_code, response_body, uri, http_method)
+    success = mocks_manager.update_mock(mock_id, status_code, response_body, headers)
 
     if not success:
         raise HTTPException(status_code=500, detail="Erro interno ao atualizar mock")
@@ -157,10 +160,14 @@ async def catch_all(full_path: str, request: Request):
             return obj
 
         final_response = replace_vars(mock_match["response"])
+        
+        # Prepare response headers
+        response_headers = mock_match.get("headers", {})
 
         return JSONResponse(
             status_code=int(mock_match["status_code"]),
-            content=final_response
+            content=final_response,
+            headers=response_headers
         )
 
     return JSONResponse(
